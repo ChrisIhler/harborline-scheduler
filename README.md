@@ -6,6 +6,8 @@ A scheduler types a change in plain English ("run boats every 15 minutes from 11
 structured edits, a Python engine recalculates every time, twelve operating rules are
 re-checked, and the result is written to an Excel workbook ready for review.
 
+**Try it live:** [harborline-scheduler.ihlerconsulting.workers.dev](https://harborline-scheduler.ihlerconsulting.workers.dev). The same Python engine runs in your browser. Pick an example, or edit the proposed edits and watch the checks react.
+
 > **Harbor Line Water Taxi is fictional.** The docks, boats, times and rules are made up for this demo.
 
 ![Festival request in the terminal](docs/screenshots/terminal_festival.png)
@@ -87,6 +89,14 @@ python -m pytest -q                   # 25 tests, including planted errors
 The edit files in `examples/` are samples in the format the skill produces. One of them
 contains a deliberately invented time to show the grounding check rejecting it.
 
+## Web demo
+
+`web/index.html` loads this repo's Python package into the browser with [Pyodide](https://pyodide.org), so the
+live page runs the exact code the tests cover. `worker/worker.js` is a small Cloudflare Worker that serves the
+page (pinned to one commit) and an optional live-Claude endpoint. The endpoint stays off until an
+`ANTHROPIC_API_KEY` secret is added, and it's capped per day and per visitor through a KV counter. The key
+belongs in its own Anthropic Console workspace with a low monthly spend limit.
+
 ## Project layout
 
 ```
@@ -99,6 +109,8 @@ harborline/agent.py        optional Anthropic API call (model proposes, never de
 skills/harborline-scheduler/SKILL.md   the Claude skill
 examples/                  four requests and their edit files
 tests/                     25 tests
+web/index.html             in-browser demo page
+worker/                    Cloudflare Worker (page + rate-limited Claude endpoint)
 ```
 
 ## Limits (it's a demo)

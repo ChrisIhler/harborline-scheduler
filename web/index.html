@@ -41,7 +41,9 @@ h1{font-size:26px;line-height:1.2;margin:8px 0 6px;color:var(--navy)}
 .flow i{color:var(--mute);font-style:normal}
 main .wrap{padding-top:20px;padding-bottom:40px}
 .grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start}
-@media (max-width:900px){.grid{grid-template-columns:1fr}}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{min-width:0}
+.checks td{overflow-wrap:anywhere}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
 .card+.card{margin-top:18px}
 h2{font-size:15px;margin:0 0 10px;display:flex;gap:8px;align-items:center}
