@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harbor Line Scheduler Demo</title>
+<meta name="description" content="Live demo: an AI scheduling assistant for a fictional water-taxi fleet. Claude proposes edits; Python checks them, recalculates every time and tests 12 operating rules.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f2236; --ink2:#3d5168; --mute:#6b7c90; --line:#d9e1ea; --bg:#f4f6f8; --card:#fff;
+  --navy:#16324f; --tide:#0e7c86; --tide-soft:#e3f3f4; --pass:#1e7b45; --pass-soft:#e2f4e9;
+  --fail:#b42318; --fail-soft:#fde8e6; --warn:#8a5a00; --warn-soft:#fff3d6; --code:#f0f3f6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#e6edf3; --ink2:#b8c4d0; --mute:#8b9aab; --line:#2a3644; --bg:#0d141c; --card:#131c26;
+    --navy:#9cc3e6; --tide:#4fc1ca; --tide-soft:#12343a; --pass:#5fd08f; --pass-soft:#123222;
+    --fail:#ff8a7a; --fail-soft:#3a1714; --warn:#f2c46b; --warn-soft:#3a2d10; --code:#0f1821;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#e6edf3; --ink2:#b8c4d0; --mute:#8b9aab; --line:#2a3644; --bg:#0d141c; --card:#131c26;
+  --navy:#9cc3e6; --tide:#4fc1ca; --tide-soft:#12343a; --pass:#5fd08f; --pass-soft:#123222;
+  --fail:#ff8a7a; --fail-soft:#3a1714; --warn:#f2c46b; --warn-soft:#3a2d10; --code:#0f1821;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+a{color:var(--tide)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+header{border-bottom:1px solid var(--line);background:var(--card)}
+header .wrap{padding-top:22px;padding-bottom:18px}
+.eyebrow{font:500 12px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--tide)}
+h1{font-size:26px;line-height:1.2;margin:8px 0 6px;color:var(--navy)}
+.lede{color:var(--ink2);max-width:760px;margin:0}
+.meta{margin-top:10px;font-size:13px;color:var(--mute)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:16px 0 0;font-size:13px}
+.flow span{padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--bg)}
+.flow span.ai{border-color:var(--tide);color:var(--tide)}
+.flow i{color:var(--mute);font-style:normal}
+main .wrap{padding-top:20px;padding-bottom:40px}
+.grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card+.card{margin-top:18px}
+h2{font-size:15px;margin:0 0 10px;display:flex;gap:8px;align-items:center}
+h2 .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--navy);color:var(--card);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
+.chip:hover,.chip[aria-pressed="true"]{border-color:var(--tide);color:var(--tide)}
+textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--code);color:var(--ink);padding:10px;font:13px/1.45 "IBM Plex Mono",monospace;resize:vertical}
+textarea#req{font:14px/1.5 "IBM Plex Sans",sans-serif;background:var(--card);min-height:84px}
+textarea#ops{min-height:220px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+button.primary,button.secondary{font:600 14px "IBM Plex Sans",sans-serif;border-radius:8px;padding:9px 14px;cursor:pointer;border:1px solid var(--navy)}
+button.primary{background:var(--navy);color:var(--card)}
+button.secondary{background:transparent;color:var(--navy)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.hint{font-size:13px;color:var(--mute);margin:8px 0 0}
+.note{font-size:13px;border-radius:8px;padding:8px 10px;margin-top:10px;background:var(--tide-soft);color:var(--ink2)}
+.note.warn{background:var(--warn-soft);color:var(--warn)}
+.banner{border-radius:10px;padding:12px 14px;font-weight:600;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.banner.ok{background:var(--pass-soft);color:var(--pass)}
+.banner.bad{background:var(--fail-soft);color:var(--fail)}
+.banner.wait{background:var(--tide-soft);color:var(--ink2);font-weight:500}
+.banner small{font-weight:500}
+.ops-list{list-style:none;margin:0;padding:0}
+.ops-list li{border-top:1px solid var(--line);padding:8px 0;font-size:14px}
+.ops-list li:first-child{border-top:0}
+.tag{display:inline-block;font:600 11px/1 "IBM Plex Mono",monospace;padding:4px 6px;border-radius:4px;margin-right:6px;vertical-align:1px}
+.tag.ok{background:var(--pass-soft);color:var(--pass)}
+.tag.bad{background:var(--fail-soft);color:var(--fail)}
+.q{color:var(--mute);font-size:13px}
+.why{color:var(--fail);font-size:13px}
+code,.mono{font-family:"IBM Plex Mono",monospace;font-size:13px}
+table{border-collapse:collapse;width:100%}
+.checks td{border-top:1px solid var(--line);padding:6px 6px;vertical-align:top;font-size:13.5px}
+.checks td:first-child{font-family:"IBM Plex Mono",monospace;color:var(--mute);width:40px}
+.checks td:nth-child(3){width:56px}
+.checks .detail{color:var(--fail);font-size:12.5px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:0;flex-wrap:wrap}
+.tabs button{border:0;background:none;font:600 13.5px "IBM Plex Sans",sans-serif;color:var(--mute);padding:8px 12px;border-bottom:2px solid transparent;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--navy);border-bottom-color:var(--tide)}
+.tt-wrap{overflow:auto;max-height:520px;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px}
+.tt th{position:sticky;top:0;background:var(--navy);color:var(--card);font:600 12px/1.25 "IBM Plex Sans",sans-serif;padding:7px 6px;text-align:center;white-space:pre-line}
+.tt td{font:12.5px "IBM Plex Mono",monospace;text-align:center;padding:4px 6px;border-top:1px solid var(--line);white-space:nowrap}
+.tt tr:nth-child(even) td{background:var(--bg)}
+.tt td.closed{color:var(--fail);font-style:italic}
+.tt td.unassigned{color:var(--fail);font-weight:600;background:var(--fail-soft)}
+.tt tr.added td{background:var(--warn-soft)}
+.daymeta{font-size:13px;color:var(--mute);margin:8px 0}
+.loading{display:flex;gap:10px;align-items:center}
+.spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--tide);border-radius:50%;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+footer{color:var(--mute);font-size:13px;padding:0 0 30px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="eyebrow">Harbor Line Water Taxi · fictional network</div>
+  <h1>AI scheduling assistant: live demo</h1>
+  <p class="lede">A scheduler asks for a change in plain English. Claude proposes edits, and every edit must quote the request. Python then rejects anything not written in the request, recalculates every time, checks 12 operating rules and writes the Excel workbook.</p>
+  <div class="flow" aria-label="How it works">
+    <span>Request</span><i>→</i><span class="ai">Claude proposes edits</span><i>→</i><span>Grounding check</span><i>→</i><span>Engine calculates times</span><i>→</i><span>12 rule checks</span><i>→</i><span>Excel</span>
+  </div>
+  <div class="meta">Code, tests and docs: <a href="https://github.com/ChrisIhler/harborline-scheduler">github.com/ChrisIhler/harborline-scheduler</a> · Built by Chris Ihler</div>
+</div></header>
+
+<main><div class="wrap"><div class="grid">
+<section>
+  <div class="card">
+    <h2><span class="n">1</span>Ask for a change</h2>
+    <div class="chips" id="examples"></div>
+    <textarea id="req" aria-label="Schedule change request" placeholder="e.g. Close Riverwalk Plaza on Sunday from 2 pm to 4 pm"></textarea>
+    <div class="row">
+      <button class="secondary" id="ask">Ask Claude to propose edits</button>
+      <span class="hint" id="liveState"></span>
+    </div>
+    <div class="note" id="askNote" hidden></div>
+  </div>
+  <div class="card">
+    <h2><span class="n">2</span>Proposed edits</h2>
+    <textarea id="ops" spellcheck="false" aria-label="Proposed edit operations (JSON)"></textarea>
+    <p class="hint">Try it: change <code>"11:00"</code> to <code>"10:30"</code> in the festival example and run again. The grounding check refuses it, because 10:30 isn't in the request.</p>
+    <div class="row">
+      <button class="primary" id="run" disabled>Check and build schedule</button>
+      <button class="secondary" id="dl" disabled>Download Excel</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="card" id="statusCard">
+    <div class="banner wait" id="banner"><span class="loading"><span class="spin"></span>Loading the Python engine in your browser…</span></div>
+  </div>
+  <div class="card" id="groundCard" hidden>
+    <h2><span class="n">3</span>Grounding check</h2>
+    <ul class="ops-list" id="groundList"></ul>
+  </div>
+  <div class="card" id="checksCard" hidden>
+    <h2><span class="n">4</span>Rule checks</h2>
+    <table class="checks"><tbody id="checksBody"></tbody></table>
+  </div>
+  <div class="card" id="ttCard" hidden>
+    <h2><span class="n">5</span>Timetable</h2>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="daymeta" id="daymeta"></div>
+    <div class="tt-wrap"><table class="tt"><thead id="ttHead"></thead><tbody id="ttBody"></tbody></table></div>
+  </div>
+</section>
+</div></div></main>
+<footer><div class="wrap">Harbor Line Water Taxi is fictional; docks, boats, times and rules are invented for this demo. The engine runs entirely in your browser (Pyodide); nothing you type is stored.</div></footer>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+<script>
+const SRC = window.HARBORLINE_SRC || "https://cdn.jsdelivr.net/gh/ChrisIhler/harborline-scheduler@main/";
+const PY_FILES = ["harborline/__init__.py","harborline/timeutil.py","harborline/config.py","harborline/engine.py",
+  "harborline/checks.py","harborline/ops.py","harborline/excel.py","data/network.yaml"];
+const EXAMPLES = [
+  {id:"01_festival", label:"Festival Saturday"},
+  {id:"02_new_dock", label:"Open a new dock"},
+  {id:"03_invented_time", label:"Planted invented time"},
+  {id:"04_short_fleet", label:"Boat out of service"},
+];
+const GLUE = `
+import json, sys
+sys.path.insert(0, "/hl")
+from harborline import config, engine, checks, excel
+from harborline.ops import apply_ops, OpResult
+from harborline.timeutil import to_12h, to_min
+CFG = config.load("/hl/data/network.yaml")
+
+def run(request, ops_json):
+    request = request or ""
+    try:
+        data = json.loads(ops_json) if ops_json.strip() else []
+    except Exception as e:
+        return json.dumps({"error": "The edits are not valid JSON: " + str(e)})
+    ops = data.get("ops", []) if isinstance(data, dict) else data
+    if not isinstance(ops, list):
+        return json.dumps({"error": "Edits must be a list, or an object with an 'ops' list."})
+    good = [o for o in ops if isinstance(o, dict)]
+    new, res = apply_ops(CFG, good, request)
+    res += [OpResult({"op": str(o)}, False, "not an edit object") for o in ops if not isinstance(o, dict)]
+    sched = engine.build(new)
+    results = checks.run_checks(new, sched)
+    excel.write("/tmp/harborline_schedule.xlsx", new, sched, results, res, request or None)
+    route = new["route"]; seq = route + route[-2::-1]
+    names = {d["id"]: d["name"] for d in new["docks"]}
+    heads = []
+    for i, d in enumerate(seq):
+        label = names[d]
+        if i == 0: label += "\\ndepart"
+        elif i == len(seq) - 1: label += "\\narrive"
+        elif i == len(route) - 1: label += "\\narrive / depart"
+        heads.append(label)
+    days = {}
+    for day, s in sched.items():
+        rows = []
+        for t in sorted(s.trips, key=lambda t: t.depart):
+            cells = []
+            for i, st in enumerate(t.stops):
+                if st.closed: cells.append("closed")
+                elif i == len(route) - 1: cells.append(to_12h(st.arrive) + " / " + to_12h(st.depart))
+                elif i == len(t.stops) - 1: cells.append(to_12h(st.arrive))
+                else: cells.append(to_12h(st.depart))
+            rows.append({"n": t.trip_no, "vessel": t.vessel, "added": t.source == "added", "cells": cells})
+        sd = new["service_days"][day]
+        days[day] = {"start": to_12h(to_min(sd["start"])), "end": to_12h(to_min(sd["end"])), "rows": rows,
+                     "vessels": len({t.vessel for t in s.trips if t.vessel}), "unassigned": len(s.unassigned)}
+    return json.dumps({
+        "heads": heads, "days": days,
+        "ops": [{"op": r.op, "applied": r.applied, "reason": r.reason} for r in res],
+        "checks": [{"id": c.rule_id, "rule": c.rule, "passed": c.passed, "problems": c.problems} for c in results],
+    })
+`;
+const $ = id => document.getElementById(id);
+let py = null, runFn = null, exampleData = {}, lastDay = "weekday", live = false;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function banner(kind, html){ const b=$("banner"); b.className="banner "+kind; b.innerHTML=html; }
+
+async function boot(){
+  try{
+    const files = await Promise.all([...PY_FILES, ...EXAMPLES.flatMap(e=>[`examples/${e.id}.txt`,`examples/${e.id}.ops.json`])]
+      .map(async p => { const r = await fetch(SRC + p); if(!r.ok) throw new Error("Could not load " + p); return [p, await r.text()]; }));
+    py = await loadPyodide();
+    await py.loadPackage(["pyyaml","micropip"]);
+    // openpyxl is bundled in the repo so the demo never depends on PyPI.
+    py.globals.set("WHEELS", py.toPy([SRC + "web/wheels/et_xmlfile-2.0.0-py3-none-any.whl",
+                                      SRC + "web/wheels/openpyxl-3.1.5-py2.py3-none-any.whl"]));
+    // et-xmlfile first, so openpyxl finds its only dependency already installed.
+    await py.runPythonAsync("import micropip\nfor w in WHEELS:\n    await micropip.install(w)");
+    py.FS.mkdirTree("/hl/harborline"); py.FS.mkdirTree("/hl/data");
+    for (const [p, txt] of files){
+      if (p.startsWith("examples/")) {
+        const id = p.split("/")[1].replace(/\.ops\.json$|\.txt$/, "");
+        exampleData[id] = exampleData[id] || {};
+        exampleData[id][p.endsWith(".txt") ? "req" : "ops"] = p.endsWith(".txt") ? txt.trim() : txt.trim();
+      } else py.FS.writeFile("/hl/" + p, txt);
+    }
+    py.runPython(GLUE);
+    runFn = py.globals.get("run");
+    $("run").disabled = false;
+    renderExamples();
+    pick("01_festival");
+  }catch(e){ banner("bad", "Couldn't load the engine: " + esc(e.message || e) + ". Try reloading the page."); }
+}
+
+function renderExamples(){
+  const box = $("examples");
+  const base = document.createElement("button"); base.className="chip"; base.textContent="Baseline (no change)";
+  base.onclick = () => { setPressed(base); $("req").value=""; $("ops").value='{"ops": []}'; doRun(); };
+  box.appendChild(base);
+  for (const e of EXAMPLES){
+    const b = document.createElement("button"); b.className="chip"; b.textContent=e.label; b.dataset.id=e.id;
+    b.onclick = () => pick(e.id); box.appendChild(b);
+  }
+}
+function setPressed(btn){ document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed", c===btn)); }
+function pick(id){
+  setPressed(document.querySelector(`.chip[data-id="${id}"]`));
+  $("req").value = exampleData[id].req;
+  $("ops").value = JSON.stringify(stripNote(JSON.parse(exampleData[id].ops)), null, 2);
+  $("askNote").hidden = true;
+  doRun();
+}
+function stripNote(o){ if (o && typeof o === "object" && !Array.isArray(o)) { const c = {...o}; delete c._note; return c; } return o; }
+
+function doRun(){
+  if (!runFn) return;
+  const out = JSON.parse(runFn($("req").value, $("ops").value));
+  if (out.error){ banner("bad", esc(out.error)); return; }
+  render(out);
+  $("dl").disabled = false;
+}
+
+function render(out){
+  const failed = out.checks.filter(c=>!c.passed), rejected = out.ops.filter(o=>!o.applied);
+  const trips = Object.values(out.days).reduce((a,d)=>a+d.rows.length,0);
+  if (!failed.length && !rejected.length) banner("ok", `All 12 checks pass <small>${trips} round trips across ${Object.keys(out.days).length} service days</small>`);
+  else banner("bad", `${failed.length ? failed.length + " rule check" + (failed.length>1?"s":"") + " failed" : ""}${failed.length && rejected.length ? " · " : ""}${rejected.length ? rejected.length + " edit" + (rejected.length>1?"s":"") + " rejected" : ""} <small>Not ready to publish</small>`);
+
+  $("groundCard").hidden = false;
+  $("groundList").innerHTML = out.ops.length ? out.ops.map((o,i)=>{
+    const f = Object.entries(o.op).filter(([k])=>k!=="op"&&k!=="quote").map(([k,v])=>`${k}=${esc(v)}`).join(", ");
+    return `<li><span class="tag ${o.applied?"ok":"bad"}">${o.applied?"APPLIED":"REJECTED"}</span><span class="mono">${esc(o.op.op||"?")}</span> ${f}
+      ${o.op.quote ? `<div class="q">quote: “${esc(o.op.quote)}”</div>` : ""}
+      ${o.applied ? "" : `<div class="why">${esc(o.reason)}</div>`}</li>`;
+  }).join("") : `<li class="q">No edits: this is the baseline schedule.</li>`;
+
+  $("checksCard").hidden = false;
+  $("checksBody").innerHTML = out.checks.map(c=>`<tr><td>${c.id}</td><td>${esc(c.rule)}${c.problems.length?`<div class="detail">${c.problems.slice(0,3).map(esc).join("<br>")}${c.problems.length>3?`<br>…and ${c.problems.length-3} more`:""}</div>`:""}</td>
+    <td><span class="tag ${c.passed?"ok":"bad"}">${c.passed?"PASS":"FAIL"}</span></td></tr>`).join("");
+
+  $("ttCard").hidden = false;
+  window._out = out;
+  $("tabs").innerHTML = Object.keys(out.days).map(d=>`<button role="tab" aria-selected="${d===lastDay}" data-day="${d}">${d[0].toUpperCase()+d.slice(1)}</button>`).join("");
+  document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{ lastDay=b.dataset.day; render(window._out); });
+  if (!out.days[lastDay]) lastDay = Object.keys(out.days)[0];
+  const d = out.days[lastDay];
+  $("daymeta").textContent = `Service ${d.start} to ${d.end} · ${d.rows.length} round trips · ${d.vessels} boats${d.unassigned?` · ${d.unassigned} trips with no boat`:""}`;
+  $("ttHead").innerHTML = `<tr><th>Trip</th><th>Boat</th>${out.heads.map(h=>`<th>${esc(h)}</th>`).join("")}</tr>`;
+  $("ttBody").innerHTML = d.rows.map(r=>`<tr class="${r.added?"added":""}"><td>${r.n}</td><td class="${r.vessel?"":"unassigned"}">${r.vessel||"NONE"}</td>${r.cells.map(c=>`<td class="${c==="closed"?"closed":""}">${esc(c)}</td>`).join("")}</tr>`).join("");
+}
+
+$("run").onclick = () => { setPressed(null); doRun(); };
+$("dl").onclick = () => {
+  const bytes = py.FS.readFile("/tmp/harborline_schedule.xlsx");
+  const url = URL.createObjectURL(new Blob([bytes], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+  const a = document.createElement("a"); a.href = url; a.download = "harborline_schedule.xlsx"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+};
+
+async function checkLive(){
+  try { const r = await fetch("/api/status"); live = r.ok && (await r.json()).live; } catch { live = false; }
+  $("ask").disabled = !live;
+  $("liveState").textContent = live ? "Live Claude is on (limited daily)." : "Live Claude is off right now; use an example or edit the edits.";
+}
+$("ask").onclick = async () => {
+  const req = $("req").value.trim(); if (!req) return;
+  $("ask").disabled = true; $("askNote").hidden = false; $("askNote").className = "note"; $("askNote").textContent = "Asking Claude…";
+  try {
+    const r = await fetch("/api/propose", {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify({request:req})});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || "Request failed");
+    setPressed(null);
+    $("ops").value = JSON.stringify({ops: j.ops || []}, null, 2);
+    const qs = (j.questions || []).filter(Boolean);
+    $("askNote").textContent = qs.length ? "Claude asks: " + qs.join(" ") : `Claude proposed ${j.ops.length} edit${j.ops.length===1?"":"s"}. Python checked them below.`;
+    if (qs.length) $("askNote").className = "note warn";
+    doRun();
+  } catch(e) { $("askNote").className = "note warn"; $("askNote").textContent = e.message; }
+  finally { $("ask").disabled = !live; }
+};
+checkLive();
+boot();
+</script>
+</body>
+</html>

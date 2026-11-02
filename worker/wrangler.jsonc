@@ -1,0 +1,10 @@
+// Deploy with: npx wrangler deploy --config worker/wrangler.jsonc
+// Then add the secret: npx wrangler secret put ANTHROPIC_API_KEY --config worker/wrangler.jsonc
+{
+  "name": "harborline-scheduler",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "kv_namespaces": [{ "binding": "LIMITS", "id": "REPLACE_WITH_KV_ID" }],
+  "vars": { "SRC_COMMIT": "main", "DAILY_LIMIT": "50", "PER_IP_LIMIT": "10" }
+}
