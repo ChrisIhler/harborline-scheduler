@@ -1,0 +1,8 @@
+{
+  "ops": [
+    {"op": "add_dock", "dock_id": "ARTS", "name": "Arts District Landing", "after": "MARKET",
+     "minutes_from_prev": 4, "minutes_to_next": 7,
+     "quote": "a new stop called Arts District Landing between Market Street and Lighthouse Pier. It's 4 minutes from Market Street and 7 minutes to Lighthouse Pier"}
+  ],
+  "questions": []
+}

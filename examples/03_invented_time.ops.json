@@ -1,0 +1,7 @@
+{
+  "_note": "PLANTED ERROR: the time 05:45 is not in the request. The grounding check must reject it.",
+  "ops": [
+    {"op": "add_departure", "day": "weekday", "time": "05:45", "quote": "Add an early weekday boat at 6 am"}
+  ],
+  "questions": []
+}

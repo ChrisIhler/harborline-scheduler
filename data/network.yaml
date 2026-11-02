@@ -1,0 +1,62 @@
+# Harbor Line Water Taxi: a FICTIONAL network used to demonstrate the scheduler.
+# Every schedule rule lives in this file. Adding a dock, a vessel or a new
+# service period is a config change; the engine code does not change.
+
+network:
+  name: Harbor Line Water Taxi
+  origin: UNION          # every round trip starts and ends here
+
+# berths: boats that can tie up at once during service.
+# overnight_berths: boats that can stay overnight (0 = none).
+docks:
+  - {id: UNION,      name: Union Station Landing, dwell_min: 0, berths: 3, overnight_berths: 6}
+  - {id: RIVERWALK,  name: Riverwalk Plaza,       dwell_min: 2, berths: 2, overnight_berths: 0}
+  - {id: MARKET,     name: Market Street,         dwell_min: 2, berths: 2, overnight_berths: 0}
+  - {id: LIGHTHOUSE, name: Lighthouse Pier,       dwell_min: 0, berths: 1, overnight_berths: 0}
+
+# Outbound stop order. The return trip runs the same stops in reverse.
+route: [UNION, RIVERWALK, MARKET, LIGHTHOUSE]
+
+# Sailing minutes between neighboring docks (same in both directions).
+legs:
+  - {from: UNION,     to: RIVERWALK,  minutes: 8}
+  - {from: RIVERWALK, to: MARKET,     minutes: 6}
+  - {from: MARKET,    to: LIGHTHOUSE, minutes: 10}
+
+fleet:
+  - {id: HERON,   capacity: 149}
+  - {id: KESTREL, capacity: 149}
+  - {id: OSPREY,  capacity: 120}
+  - {id: PLOVER,  capacity: 120}
+  - {id: TERN,    capacity: 96}
+  - {id: WREN,    capacity: 96}
+
+rules:
+  min_turnaround_min: 6          # minimum time at each terminal before sailing again
+  max_continuous_min: 240        # a crew may run at most 4 hours without a break
+  break_min: 30                  # length of that break
+  max_vessel_hours: 12           # a vessel's total service hours in one day
+  max_gap_min: 45                # never leave the origin dock without a departure longer than this
+
+service_days:
+  weekday:
+    start: "06:30"
+    end: "21:00"                 # every boat is back at the origin by this time
+    vessels: [HERON, KESTREL, OSPREY, PLOVER, TERN]
+    headways:                    # minutes between departures from the origin
+      - {start: "06:30", end: "09:30", minutes: 15}
+      - {start: "09:30", end: "16:00", minutes: 30}
+      - {start: "16:00", end: "19:00", minutes: 15}
+      - {start: "19:00", end: "21:00", minutes: 30}
+  saturday:
+    start: "09:00"
+    end: "22:00"
+    vessels: [HERON, KESTREL, OSPREY, PLOVER, TERN, WREN]
+    headways:
+      - {start: "09:00", end: "22:00", minutes: 20}
+  sunday:
+    start: "10:00"
+    end: "19:00"
+    vessels: [HERON, KESTREL, OSPREY, PLOVER]
+    headways:
+      - {start: "10:00", end: "19:00", minutes: 30}

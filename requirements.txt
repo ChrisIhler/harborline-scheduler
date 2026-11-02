@@ -1,0 +1,5 @@
+openpyxl>=3.1
+PyYAML>=6.0
+pytest>=7.0
+# Optional, only for `python -m harborline ask`:
+# anthropic>=0.40

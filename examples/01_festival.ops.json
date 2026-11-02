@@ -1,0 +1,9 @@
+{
+  "ops": [
+    {"op": "set_headway", "day": "saturday", "start": "11:00", "end": "16:00", "minutes": 15,
+     "quote": "run boats every 15 minutes from 11 am to 4 pm"},
+    {"op": "close_dock", "day": "saturday", "dock": "MARKET", "start": "13:00", "end": "15:00",
+     "quote": "close Market Street from 1:00 pm to 3:00 pm"}
+  ],
+  "questions": []
+}

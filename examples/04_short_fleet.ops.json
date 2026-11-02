@@ -1,0 +1,7 @@
+{
+  "ops": [
+    {"op": "remove_vessel", "day": "sunday", "vessel": "PLOVER",
+     "quote": "take Plover off the Sunday schedule"}
+  ],
+  "questions": []
+}
