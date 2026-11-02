@@ -16,29 +16,31 @@
 
 const REPO = "ChrisIhler/harborline-scheduler";
 
-const SYSTEM = `You turn a water-taxi scheduler's plain-English request into edit operations for the
-Harbor Line Water Taxi (a fictional network). You never write a timetable.
-
-Rules:
-1. Never invent a time or a number. Every clock time and minute count in an operation must be
-   written in the request. If one is missing, return no op for it and ask a question instead.
-2. Every op has "quote": words copied exactly from the request that justify it.
-3. Times are 24-hour "HH:MM". Days: weekday, saturday, sunday, all.
-4. If the request is not about this schedule, return no ops and one short question.
-
-Operations:
-- set_service_hours {day, start?, end?}
-- set_headway {day, start, end, minutes}        ("every 15 minutes from 11 am to 4 pm")
-- close_dock {day, dock, start, end}            (only RIVERWALK or MARKET; terminals can't close)
-- add_departure {day, time} / cancel_departure {day, time}   (departures from UNION)
-- add_vessel {day, vessel} / remove_vessel {day, vessel}
-- add_dock {dock_id, name, after, minutes_from_prev, minutes_to_next, dwell_min?, berths?}
-
-Network:
-- Docks in route order: UNION (Union Station Landing), RIVERWALK (Riverwalk Plaza),
-  MARKET (Market Street), LIGHTHOUSE (Lighthouse Pier). Boats run UNION -> LIGHTHOUSE and back.
-- Fleet: HERON, KESTREL, OSPREY, PLOVER, TERN, WREN.
-- Rostered: weekday HERON KESTREL OSPREY PLOVER TERN; saturday all six; sunday HERON KESTREL OSPREY PLOVER.`;
+const SYSTEM = [
+  "You turn a water-taxi scheduler's plain-English request into edit operations for the",
+  "Harbor Line Water Taxi (a fictional network). You never write a timetable.",
+  "",
+  "Rules:",
+  "1. Never invent a time or a number. Every clock time and minute count in an operation must be",
+  "   written in the request. If one is missing, return no op for it and ask a question instead.",
+  "2. Every op has \"quote\": words copied exactly from the request that justify it.",
+  "3. Times are 24-hour \"HH:MM\". Days: weekday, saturday, sunday, all.",
+  "4. If the request is not about this schedule, return no ops and one short question.",
+  "",
+  "Operations:",
+  "- set_service_hours {day, start?, end?}",
+  "- set_headway {day, start, end, minutes}        (\"every 15 minutes from 11 am to 4 pm\")",
+  "- close_dock {day, dock, start, end}            (only RIVERWALK or MARKET; terminals can't close)",
+  "- add_departure {day, time} / cancel_departure {day, time}   (departures from UNION)",
+  "- add_vessel {day, vessel} / remove_vessel {day, vessel}",
+  "- add_dock {dock_id, name, after, minutes_from_prev, minutes_to_next, dwell_min?, berths?}",
+  "",
+  "Network:",
+  "- Docks in route order: UNION (Union Station Landing), RIVERWALK (Riverwalk Plaza),",
+  "  MARKET (Market Street), LIGHTHOUSE (Lighthouse Pier). Boats run UNION -> LIGHTHOUSE and back.",
+  "- Fleet: HERON, KESTREL, OSPREY, PLOVER, TERN, WREN.",
+  "- Rostered: weekday HERON KESTREL OSPREY PLOVER TERN; saturday all six; sunday HERON KESTREL OSPREY PLOVER.",
+].join("\n");
 
 const TOOL = {
   name: "propose_edits",
@@ -74,14 +76,14 @@ const json = (body, status = 200) =>
 
 async function page(env, ctx) {
   const commit = env.SRC_COMMIT || "main";
-  const src = `https://cdn.jsdelivr.net/gh/${REPO}@${commit}/`;
+  const src = "https://cdn.jsdelivr.net/gh/" + REPO + "@" + commit + "/";
   const cache = caches.default;
-  const key = new Request(`https://harborline.cache/page/${commit}`);
+  const key = new Request("https://harborline.cache/page/" + commit);
   let html = await (await cache.match(key))?.text();
   if (!html) {
     const r = await fetch(src + "web/index.html");
     if (!r.ok) return new Response("Demo page unavailable right now.", { status: 502 });
-    html = (await r.text()).replace("<head>", `<head>\n<script>window.HARBORLINE_SRC=${JSON.stringify(src)}</script>`);
+    html = (await r.text()).replace("<head>", "<head>\n<script>window.HARBORLINE_SRC=" + JSON.stringify(src) + "</script>");
     ctx.waitUntil(cache.put(key, new Response(html, { headers: { "cache-control": "max-age=3600" } })));
   }
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=300" } });
@@ -90,11 +92,11 @@ async function page(env, ctx) {
 async function overLimit(env, ip) {
   if (!env.LIMITS) return "Live Claude is not configured.";
   const day = new Date().toISOString().slice(0, 10);
-  const dayKey = `day:${day}`, ipKey = `ip:${day}:${ip}`;
+  const dayKey = "day:" + day, ipKey = "ip:" + day + ":" + ip;
   const [total, mine] = await Promise.all([env.LIMITS.get(dayKey), env.LIMITS.get(ipKey)]);
   const dayLimit = parseInt(env.DAILY_LIMIT || "50", 10), ipLimit = parseInt(env.PER_IP_LIMIT || "10", 10);
   if ((+total || 0) >= dayLimit) return "Today's live Claude requests are used up. The examples still work, and it resets at midnight UTC.";
-  if ((+mine || 0) >= ipLimit) return `You've used your ${ipLimit} live requests for today. The examples still work.`;
+  if ((+mine || 0) >= ipLimit) return "You've used your " + ipLimit + " live requests for today. The examples still work.";
   await Promise.all([
     env.LIMITS.put(dayKey, String((+total || 0) + 1), { expirationTtl: 172800 }),
     env.LIMITS.put(ipKey, String((+mine || 0) + 1), { expirationTtl: 172800 }),
